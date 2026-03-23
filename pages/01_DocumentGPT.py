@@ -3,9 +3,11 @@ import os
 
 load_dotenv()
 
+from langchain_core.prompts import ChatPromptTemplate
 from langchain_community.document_loaders import TextLoader
 from langchain_classic.embeddings import CacheBackedEmbeddings
-from langchain_openai import OpenAIEmbeddings
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_core.runnables import RunnableLambda, RunnablePassthrough
 from langchain_classic.storage import LocalFileStore
 from langchain_text_splitters import CharacterTextSplitter
 from langchain_community.vectorstores import FAISS
@@ -14,6 +16,13 @@ import streamlit as st
 st.set_page_config(
     page_title="DocumentGPT",
     page_icon="📃",
+)
+
+llm = ChatOpenAI(
+    base_url=os.getenv("OPENAI_BASE_URL"),
+    api_key=os.getenv("OPENAI_API_KEY"),
+    model=os.getenv("OPENAI_MODEL_NAME", "gpt-5.1"),
+    temperature=0.1,
 )
 
 
@@ -60,6 +69,25 @@ def paint_history():
         )
 
 
+def format_docs(docs):
+    return "\n\n".join(document.page_content for document in docs)
+
+
+prompt = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            """
+            Answer the question using ONLY the following context. If you don't know the answer just say you don't know. DON'T make anything up.
+
+            Context: {context}
+            """,
+        ),
+        ("human", "{question}"),
+    ]
+)
+
+
 st.title("DocumentGPT")
 
 st.markdown(
@@ -85,5 +113,16 @@ if file:
     message = st.chat_input("Ask anything about your file...")
     if message:
         send_message(message, "human")
+        chain = (
+            {
+                "context": retriever | RunnableLambda(format_docs),
+                "question": RunnablePassthrough(),
+            }
+            | prompt
+            | llm
+        )
+        response = chain.invoke(message)
+        send_message(response.content, "ai")
+
 else:
     st.session_state["messages"] = []
