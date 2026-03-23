@@ -1,7 +1,8 @@
+crewai>=1.0.0
+crewai-tools>=1.0.0
 langchain-openai>=1.0.0
-langchain-core>=1.0.0
-langchain-aws>=1.0.0
-boto3
+openai>=2.0.0
+yfinance
 python-dotenv>=1.0.0
 jupyter
 ipykernel
