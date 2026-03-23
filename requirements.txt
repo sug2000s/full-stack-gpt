@@ -5,6 +5,7 @@ langchain-text-splitters>=1.0.0
 langchain-classic>=1.0.0
 tiktoken>=0.8.0
 faiss-cpu
+streamlit
 python-dotenv>=1.0.0
 jupyter
 ipykernel
