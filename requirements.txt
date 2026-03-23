@@ -6,6 +6,7 @@ langchain-classic>=1.0.0
 tiktoken>=0.8.0
 faiss-cpu
 streamlit
+gpt4all
 python-dotenv>=1.0.0
 jupyter
 ipykernel
