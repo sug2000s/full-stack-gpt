@@ -8,42 +8,61 @@ from fastapi import Body, FastAPI, Form, Request
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
+# [Legacy] 기존 방식:
+# import pinecone
+# from langchain.embeddings import OpenAIEmbeddings
+# from langchain.vectorstores import Pinecone
+# pinecone.init(api_key=os.getenv("PINECONE_API_KEY"), environment="gcp-starter")
+
+# 최신 방식: Pinecone 클라이언트와 langchain-pinecone 패키지 사용
+from pinecone import Pinecone as PineconeClient
+from langchain_openai import OpenAIEmbeddings
+from langchain_pinecone import PineconeVectorStore
+
+pc = PineconeClient(api_key=os.getenv("PINECONE_API_KEY"))
+
+embeddings = OpenAIEmbeddings(
+    base_url=os.getenv("OPENAI_EMBEDDING_BASE_URL"),
+    api_key=os.getenv("OPENAI_API_KEY"),
+    model=os.getenv("OPENAI_EMBEDDING_MODEL"),
+)
+
+# [Legacy] 기존 방식: vector_store = Pinecone.from_existing_index("recipes", embeddings)
+# 최신 방식: PineconeVectorStore 사용
+vector_store = PineconeVectorStore.from_existing_index(
+    "recipes",
+    embeddings,
+)
+
+
 app = FastAPI(
-    title="Nicolacus Maximus Quote Giver",
-    description="Get a real quote said by Nicolacus Maximus himself.",
+    title="CheftGPT. The best provider of Indian Recipes in the world.",
+    description="Give ChefGPT the name of an ingredient and it will give you multiple recipes to use that ingredient on in return.",
     servers=[
         {
-            "url": "https://rage-adapter-gtk-wooden.trycloudflare.com",
+            "url": "https://occupations-partition-governments-analyzed.trycloudflare.com",
         },
     ],
 )
 
 
-class Quote(BaseModel):
-    quote: str = Field(
-        description="The quote that Nicolacus Maximus said.",
-    )
-    year: int = Field(
-        description="The year when Nicolacus Maximus said the quote.",
-    )
+class Document(BaseModel):
+    page_content: str
 
 
 @app.get(
-    "/quote",
-    summary="Returns a random quote by Nicolacus Maximus",
-    description="Upon receiving a GET request this endpoint will return a real quiote said by Nicolacus Maximus himself.",
-    response_description="A Quote object that contains the quote said by Nicolacus Maximus and the date when the quote was said.",
-    response_model=Quote,
+    "/recipes",
+    summary="Returns a list of recipes.",
+    description="Upon receiving an ingredient, this endpoint will return a list of recipes that contain that ingredient.",
+    response_description="A Document object that contains the recipe and preparation instructions",
+    response_model=list[Document],
     openapi_extra={
         "x-openai-isConsequential": False,
     },
 )
-def get_quote(request: Request):
-    print(request.headers)
-    return {
-        "quote": "Life is short so eat it all.",
-        "year": 1950,
-    }
+def get_recipe(ingredient: str):
+    docs = vector_store.similarity_search(ingredient)
+    return docs
 
 
 user_token_db = {"ABCDEF": "nico"}
