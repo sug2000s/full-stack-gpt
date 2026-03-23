@@ -1,8 +1,3 @@
-from dotenv import load_dotenv
-import os
-
-load_dotenv()
-
 import streamlit as st
 
 st.set_page_config(
@@ -18,11 +13,11 @@ Welcome to my FullstackGPT Portfolio!
 
 Here are the apps I made:
 
-- [x] [DocumentGPT](/DocumentGPT)
-- [x] [PrivateGPT](/PrivateGPT)
-- [x] [QuizGPT](/QuizGPT)
-- [x] [SiteGPT](/SiteGPT)
-- [ ] [MeetingGPT](/MeetingGPT)
-- [ ] [InvestorGPT](/InvestorGPT)
+- [x] [📃 DocumentGPT](/DocumentGPT)
+- [x] [🔒 PrivateGPT](/PrivateGPT)
+- [x] [❓ QuizGPT](/QuizGPT)
+- [x] [🖥️ SiteGPT](/SiteGPT)
+- [ ] [💼 MeetingGPT](/MeetingGPT)
+- [ ] [📈 InvestorGPT](/InvestorGPT)
 """
 )
