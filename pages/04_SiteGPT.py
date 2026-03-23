@@ -3,16 +3,23 @@ import os
 
 load_dotenv()
 
-from langchain_community.document_loaders import AsyncChromiumLoader
-from langchain_community.document_transformers import Html2TextTransformer
+from langchain_community.document_loaders import SitemapLoader
 import streamlit as st
+
+
+@st.cache_data(show_spinner="Loading website...")
+def load_website(url):
+    loader = SitemapLoader(url)
+    loader.requests_per_second = 5
+    docs = loader.load()
+    return docs
+
 
 st.set_page_config(
     page_title="SiteGPT",
     page_icon="🖥️",
 )
 
-html2text_transformer = Html2TextTransformer()
 
 st.markdown(
     """
@@ -33,7 +40,9 @@ with st.sidebar:
 
 
 if url:
-    loader = AsyncChromiumLoader([url])
-    docs = loader.load()
-    transformed = html2text_transformer.transform_documents(docs)
-    st.write(docs)
+    if ".xml" not in url:
+        with st.sidebar:
+            st.error("Please write down a Sitemap URL.")
+    else:
+        docs = load_website(url)
+        st.write(docs)
