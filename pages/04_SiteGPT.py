@@ -4,14 +4,40 @@ import os
 load_dotenv()
 
 from langchain_community.document_loaders import SitemapLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 import streamlit as st
+
+
+def parse_page(soup):
+    header = soup.find("header")
+    footer = soup.find("footer")
+    if header:
+        header.decompose()
+    if footer:
+        footer.decompose()
+    return (
+        str(soup.get_text())
+        .replace("\n", " ")
+        .replace("\xa0", " ")
+        .replace("CloseSearch Submit Blog", "")
+    )
 
 
 @st.cache_data(show_spinner="Loading website...")
 def load_website(url):
-    loader = SitemapLoader(url)
-    loader.requests_per_second = 5
-    docs = loader.load()
+    splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
+        chunk_size=1000,
+        chunk_overlap=200,
+    )
+    loader = SitemapLoader(
+        url,
+        filter_urls=[
+            r"^(.*\/blog\/).*",
+        ],
+        parsing_function=parse_page,
+    )
+    loader.requests_per_second = 2
+    docs = loader.load_and_split(text_splitter=splitter)
     return docs
 
 
