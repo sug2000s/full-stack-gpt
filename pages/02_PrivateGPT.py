@@ -10,8 +10,9 @@ from langchain_core.prompts import ChatPromptTemplate
 # 최신: UnstructuredFileLoader 대신 TextLoader 사용
 from langchain_community.document_loaders import TextLoader
 
-# [Legacy] from langchain.embeddings import CacheBackedEmbeddings, OpenAIEmbeddings
-from langchain_openai import OpenAIEmbeddings
+# [Legacy] from langchain.embeddings import CacheBackedEmbeddings, OllamaEmbeddings
+# [Legacy] langchain_community 제공. 최신: langchain_ollama 패키지도 있음
+from langchain_community.embeddings import OllamaEmbeddings
 from langchain_classic.embeddings import CacheBackedEmbeddings
 
 # [Legacy] from langchain.schema.runnable import RunnableLambda, RunnablePassthrough
@@ -26,8 +27,9 @@ from langchain_text_splitters import CharacterTextSplitter
 # [Legacy] from langchain.vectorstores.faiss import FAISS
 from langchain_community.vectorstores.faiss import FAISS
 
-# [Legacy] from langchain.chat_models import ChatOpenAI
-from langchain_openai import ChatOpenAI
+# [Legacy] from langchain.chat_models import ChatOllama
+# [Legacy] langchain_community 제공. 최신: langchain_ollama 패키지도 있음
+from langchain_community.chat_models import ChatOllama
 
 # [Legacy] from langchain.callbacks.base import BaseCallbackHandler
 from langchain_core.callbacks import BaseCallbackHandler
@@ -54,10 +56,8 @@ class ChatCallbackHandler(BaseCallbackHandler):
         self.message_box.markdown(self.message)
 
 
-llm = ChatOpenAI(
-    base_url=os.getenv("OPENAI_BASE_URL"),
-    api_key=os.getenv("OPENAI_API_KEY"),
-    model=os.getenv("OPENAI_MODEL_NAME", "gpt-5.1"),
+llm = ChatOllama(
+    model="mistral:latest",
     temperature=0.1,
     streaming=True,
     callbacks=[
@@ -80,11 +80,7 @@ def embed_file(file):
     )
     loader = TextLoader(file_path)
     docs = loader.load_and_split(text_splitter=splitter)
-    embeddings = OpenAIEmbeddings(
-        base_url=os.getenv("OPENAI_EMBEDDING_BASE_URL"),
-        api_key=os.getenv("OPENAI_API_KEY"),
-        model=os.getenv("OPENAI_EMBEDDING_MODEL"),
-    )
+    embeddings = OllamaEmbeddings(model="mistral:latest")
     cached_embeddings = CacheBackedEmbeddings.from_bytes_store(embeddings, cache_dir)
     vectorstore = FAISS.from_documents(docs, cached_embeddings)
     retriever = vectorstore.as_retriever()
@@ -115,18 +111,12 @@ def format_docs(docs):
     return "\n\n".join(document.page_content for document in docs)
 
 
-prompt = ChatPromptTemplate.from_messages(
-    [
-        (
-            "system",
-            """
-            Answer the question using ONLY the following context. If you don't know the answer just say you don't know. DON'T make anything up.
+prompt = ChatPromptTemplate.from_template(
+    """Answer the question using ONLY the following context and not your training data. If you don't know the answer just say you don't know. DON'T make anything up.
 
-            Context: {context}
-            """,
-        ),
-        ("human", "{question}"),
-    ]
+    Context: {context}
+    Question:{question}
+    """
 )
 
 
