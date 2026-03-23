@@ -3,6 +3,9 @@ import os
 
 load_dotenv()
 
+# [Legacy] 기존 방식: from langchain.storage import LocalFileStore
+from langchain_classic.storage import LocalFileStore
+
 import streamlit as st
 import subprocess
 import math
@@ -25,6 +28,13 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 # [Legacy] 기존 방식: from langchain.schema import StrOutputParser
 from langchain_core.output_parsers import StrOutputParser
 
+# [Legacy] 기존 방식: from langchain.vectorstores.faiss import FAISS
+from langchain_community.vectorstores.faiss import FAISS
+
+# [Legacy] 기존 방식: from langchain.embeddings import CacheBackedEmbeddings, OpenAIEmbeddings
+from langchain_classic.embeddings import CacheBackedEmbeddings
+from langchain_openai import OpenAIEmbeddings
+
 llm = ChatOpenAI(
     base_url=os.getenv("OPENAI_BASE_URL"),
     api_key=os.getenv("OPENAI_API_KEY"),
@@ -32,8 +42,32 @@ llm = ChatOpenAI(
     temperature=0.1,
 )
 
-
 has_transcript = os.path.exists("./.cache/podcast.txt")
+
+splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
+    chunk_size=800,
+    chunk_overlap=100,
+)
+
+
+@st.cache_data()
+def embed_file(file_path):
+    cache_dir = LocalFileStore(f"./.cache/embeddings/{file.name}")
+    splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
+        chunk_size=800,
+        chunk_overlap=100,
+    )
+    loader = TextLoader(file_path)
+    docs = loader.load_and_split(text_splitter=splitter)
+    embeddings = OpenAIEmbeddings(
+        base_url=os.getenv("OPENAI_EMBEDDING_BASE_URL"),
+        api_key=os.getenv("OPENAI_API_KEY"),
+        model=os.getenv("OPENAI_EMBEDDING_MODEL"),
+    )
+    cached_embeddings = CacheBackedEmbeddings.from_bytes_store(embeddings, cache_dir)
+    vectorstore = FAISS.from_documents(docs, cached_embeddings)
+    retriever = vectorstore.as_retriever()
+    return retriever
 
 
 @st.cache_data()
@@ -141,13 +175,9 @@ if video:
 
     with summary_tab:
         start = st.button("Generate summary")
-
         if start:
             loader = TextLoader(transcript_path)
-            splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
-                chunk_size=800,
-                chunk_overlap=100,
-            )
+
             docs = loader.load_and_split(text_splitter=splitter)
 
             first_summary_prompt = ChatPromptTemplate.from_template(
@@ -190,3 +220,10 @@ if video:
                     )
                     st.write(summary)
             st.write(summary)
+
+    with qa_tab:
+        retriever = embed_file(transcript_path)
+
+        docs = retriever.invoke("do they talk about marcus aurelius?")
+
+        st.write(docs)
